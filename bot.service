@@ -1,0 +1,13 @@
+[Unit]
+Description=Udemy Course Coupons Telegram Bot
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=d:\Udemy Course Coupons Bot
+ExecStart=python bot.py
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
