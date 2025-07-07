@@ -1,9 +1,11 @@
 import os
 import logging
+import asyncio
 from telegram.ext import Application, CommandHandler
 from telegram import Update
 from telegram.ext import ContextTypes
 from scraper import get_courses
+from datetime import datetime
 
 # Configure logging
 logging.basicConfig(
@@ -12,8 +14,12 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Bot token
+# Bot token and channel ID
 TOKEN = '7962778190:AAFC1pBpsVof7Gae73tKEflbF_EUCV6d6yc'
+CHANNEL_ID = '@ENROLL_FREE_UDEMY_COURSES'
+
+# Store last posted courses to avoid duplicates
+last_posted_courses = set()
 
 # Command handlers
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -21,6 +27,63 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text('Hello! Welcome to Udemy Course Coupons Bot!\nUse /courses to see latest Udemy courses.')
     except Exception as e:
         logger.error(f"Error in start command: {str(e)}")
+
+def format_course_message(courses):
+    message = '🎓 ⭐️ LATEST UDEMY COURSE COUPONS! ⭐️ 🎉\n\n'
+    for course in courses:
+        message += (
+            f'📚 ════『 COURSE DETAILS 』════ 📚\n\n'
+            f'🎯 *{course["title"]}*\n\n'
+            f'🌐 Language: {course["language"]}\n'
+            f'⏰ Added: {course["date"]}\n'
+            f'💎 Status: AVAILABLE\n'
+            f'💰 Price: FREE (Limited Time) 🏷️\n\n'
+            f'🔥 ENROLL NOW 🔥\n'
+            f'🔗 {course["udemy_url"]}\n\n'
+            f'📢 Share with your friends & colleagues! 🤝\n'
+            f'⭐️ Learn, Grow & Succeed Together! 🌟\n'
+            f'═══════════════════════\n\n'
+        )
+    return message
+
+async def post_to_channel(context: ContextTypes.DEFAULT_TYPE, courses):
+    try:
+        if courses:
+            message = format_course_message(courses)
+            await context.bot.send_message(
+                chat_id=CHANNEL_ID,
+                text=message,
+                parse_mode='Markdown',
+                disable_web_page_preview=True,
+                protect_content=True
+            )
+    except Exception as e:
+        logger.error(f"Error posting to channel: {str(e)}")
+
+async def check_new_courses(context: ContextTypes.DEFAULT_TYPE):
+    global last_posted_courses
+    try:
+        courses = get_courses()
+        if courses:
+            new_courses = []
+            for course in courses:
+                # Skip courses with no Udemy URL
+                if not course['udemy_url']:
+                    continue
+                course_id = f"{course['title']}-{course['date']}"
+                if course_id not in last_posted_courses:
+                    new_courses.append(course)
+                    last_posted_courses.add(course_id)
+            
+            if new_courses:
+                await post_to_channel(context, new_courses)
+                
+            # Keep only recent courses in memory
+            if len(last_posted_courses) > 100:
+                last_posted_courses.clear()
+                
+    except Exception as e:
+        logger.error(f"Error checking new courses: {str(e)}")
 
 async def courses(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
@@ -54,6 +117,9 @@ def main():
             # Add command handlers
             application.add_handler(CommandHandler("start", start))
             application.add_handler(CommandHandler("courses", courses))
+            
+            # Add job for checking new courses every 5 seconds
+            application.job_queue.run_repeating(check_new_courses, interval=5)
 
             # Add error handler
             application.add_error_handler(error_handler)

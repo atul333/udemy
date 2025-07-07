@@ -27,12 +27,22 @@ def get_udemy_url(discudemy_url, headers):
             # Find the Udemy URL in the coupon section
             udemy_link = coupon_section.find('a', href=lambda x: x and 'udemy.com/course' in x)
             if udemy_link:
-                return udemy_link['href']
+                url = udemy_link['href']
+                # Preserve underscore in coupon code
+                if 'couponCode=' in url:
+                    base_url, params = url.split('?', 1)
+                    return f"{base_url}?{params}"
+                return url
         
         # If not found in coupon section, try finding any Udemy link
         udemy_link = soup.find('a', href=lambda x: x and 'udemy.com/course' in x)
         if udemy_link:
-            return udemy_link['href']
+            url = udemy_link['href']
+            # Preserve underscore in coupon code
+            if 'couponCode=' in url:
+                base_url, params = url.split('?', 1)
+                return f"{base_url}?{params}"
+            return url
             
         print(f'No Udemy link found for {discudemy_url}')
         return None
@@ -75,11 +85,17 @@ def get_courses():
                     card.find(['span', 'time'])
                 )
                 
+                # Get language
+                lang_elem = card.find_previous('div', class_=['language', 'lang']) or \
+                           card.find_parent('div', class_=['language', 'lang'])
+                language = lang_elem.text.strip() if lang_elem else 'English'
+
                 # Try different possible selectors for category
                 category_elem = (
-                    card.find('span', class_=['category', 'course-category']) or
+                    card.find('div', class_=['category', 'course-category', 'cat-links']) or
                     card.find('a', class_=['category', 'course-category']) or
-                    card.find(['span', 'a'], string=lambda s: s and any(cat in s.lower() for cat in ['business', 'development', 'finance', 'it', 'office', 'personal', 'design', 'marketing', 'lifestyle', 'photography', 'health', 'music']))
+                    card.find('span', class_=['category', 'course-category']) or
+                    card.find('div', string=lambda s: s and any(cat in s.lower() for cat in ['business', 'development', 'finance', 'it', 'office', 'personal', 'design', 'marketing', 'lifestyle', 'photography', 'health', 'music']))
                 )
                 
                 if title_elem and date_elem:
@@ -90,12 +106,17 @@ def get_courses():
                     if title and date:  # Only add if both fields are non-empty
                         course_url = generate_course_url(category, title)
                         udemy_url = get_udemy_url(course_url, headers)
+                        # Clean up category text
+                        if category:
+                            category = category.replace('Category:', '').strip()
+                            
                         courses.append({
                             'title': title,
                             'date': date,
                             'category': category,
                             'url': course_url,
-                            'udemy_url': udemy_url
+                            'udemy_url': udemy_url,
+                            'language': language
                         })
             except Exception as card_error:
                 print(f'Error processing card: {str(card_error)}')
