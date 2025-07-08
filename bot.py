@@ -29,7 +29,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logger.error(f"Error in start command: {str(e)}")
 
 def format_course_message(courses):
-    
+    message = ""
     for course in courses:
         message += (
             f'🎯 *{course["title"]}*\n\n'
