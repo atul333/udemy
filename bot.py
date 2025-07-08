@@ -136,7 +136,7 @@ def main():
             application.add_handler(CommandHandler("courses", courses))
             
             # Add job for checking new courses every 5 seconds
-            application.job_queue.run_repeating(check_new_courses, interval=5)
+            application.job_queue.run_repeating(check_new_courses, interval=30)
 
             # Add error handler
             application.add_error_handler(error_handler)
