@@ -29,19 +29,18 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logger.error(f"Error in start command: {str(e)}")
 
 def format_course_message(courses):
-    message = '🎓 ⭐️ LATEST UDEMY COURSE COUPONS! ⭐️ 🎉\n\n'
+    
     for course in courses:
         message += (
-            f'📚 ════『 COURSE DETAILS 』════ 📚\n\n'
             f'🎯 *{course["title"]}*\n\n'
-            f'🌐 Language: {course["language"]}\n'
-            f'⏰ Added: {course["date"]}\n'
-            f'💎 Status: AVAILABLE\n'
-            f'💰 Price: FREE (Limited Time) 🏷️\n\n'
-            f'🔥 ENROLL NOW 🔥\n'
+            f'🌐 *Language: {course["language"]}*\n'
+            f'⏰ *Added: {course["date"]}*\n'
+            f'💎 *Status: AVAILABLE*\n'
+            f'💰 *Price: FREE (Limited Time)* 🏷️\n\n'
+            f'🔥 *ENROLL NOW* 🔥\n'
             f'🔗 {course["udemy_url"]}\n\n'
-            f'📢 Share with your friends & colleagues! 🤝\n'
-            f'⭐️ Learn, Grow & Succeed Together! 🌟\n'
+            f'📢 *Share with your friends & colleagues!* 🤝\n'
+            f'⭐️ *Learn, Grow & Succeed Together!* 🌟\n'
             f'═══════════════════════\n\n'
         )
     return message
