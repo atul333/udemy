@@ -2,10 +2,11 @@ import os
 import logging
 import asyncio
 from telegram.ext import Application, CommandHandler
-from telegram import Update
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
 from scraper import get_courses
 from datetime import datetime
+import uuid
 
 # Configure logging
 logging.basicConfig(
@@ -21,6 +22,9 @@ CHANNEL_ID = '@ENROLL_FREE_UDEMY_COURSES'
 # Store last posted courses to avoid duplicates
 last_posted_courses = set()
 
+# Store course data with unique IDs
+course_data = {}
+
 # Command handlers
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
@@ -29,35 +33,49 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logger.error(f"Error in start command: {str(e)}")
 
 def format_course_message(courses):
-    message = ""
+    global course_data
+    messages = []
     for course in courses:
-        message += (
+        # Generate a unique ID for this course
+        course_id = str(uuid.uuid4())
+        # Store course URL with the unique ID
+        course_data[course_id] = course["udemy_url"]
+        
+        message = (
             f'🎯 *{course["title"]}*\n\n'
             f'🌐 *Language: {course["language"]}*\n'
             f'⏰ *Added: {course["date"]}*\n'
             f'💎 *Status: AVAILABLE*\n'
             f'💰 *Price: FREE (Limited Time)* 🏷️\n\n'
-            f'🔥 *ENROLL NOW* 🔥\n'
-            f'🔗 {course["udemy_url"]}\n\n'
             f'📢 *Share with your friends & colleagues!* 🤝\n'
-            f'⭐️ *Learn, Grow & Succeed Together!* 🌟\n'
+            f'⭐️ *Learn, Grow & Succeed Together!* 🌟\n\n'
             f'═══════════════════════\n\n'
         )
-    return message
+        messages.append((message, course_id))
+    return messages
 
 async def post_to_channel(context: ContextTypes.DEFAULT_TYPE, courses):
     try:
         if courses:
-            message = format_course_message(courses)
-            await context.bot.send_message(
-                chat_id=CHANNEL_ID,
-                text=message,
-                parse_mode='Markdown',
-                disable_web_page_preview=True,
-                protect_content=True
-            )
+            course_messages = format_course_message(courses)
+            for message_text, course_id in course_messages:
+                # Create inline keyboard with button
+                keyboard = [
+                    [InlineKeyboardButton("🔥 ENROLL NOW 🔥", url=course_data[course_id])]
+                ]
+                reply_markup = InlineKeyboardMarkup(keyboard)
+                
+                await context.bot.send_message(
+                    chat_id=CHANNEL_ID,
+                    text=message_text,
+                    parse_mode='Markdown',
+                    disable_web_page_preview=True,
+                    protect_content=True,
+                    reply_markup=reply_markup
+                )
     except Exception as e:
         logger.error(f"Error posting to channel: {str(e)}")
+        logger.exception(e)  # Log full exception details
 
 async def check_new_courses(context: ContextTypes.DEFAULT_TYPE):
     global last_posted_courses
