@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 # Bot token and channel ID
 TOKEN = '7962778190:AAFC1pBpsVof7Gae73tKEflbF_EUCV6d6yc'
-CHANNEL_ID = '@ENROLL_FREE_UDEMY_COURSES'
+CHANNEL_ID = ('@ENROLL_FREE_UDEMY_COURSES','@udemy_direct_coupons','@free_udemy_courses_ak')
 
 # Store last posted courses to avoid duplicates
 last_posted_courses = set()
