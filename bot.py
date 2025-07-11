@@ -34,12 +34,13 @@ async def post_to_channel(context: ContextTypes.DEFAULT_TYPE, courses):
         if courses:
             for course in courses:
                 if course['udemy_url']:
-                    await context.bot.send_message(
-                        chat_id=CHANNEL_ID,
-                        text=course['udemy_url'],
-                        disable_web_page_preview=False,
-                        protect_content=True
-                    )
+                    for channel in CHANNEL_ID:
+                        await context.bot.send_message(
+                            chat_id=channel,
+                            text=course['udemy_url'],
+                            disable_web_page_preview=False,
+                            protect_content=True
+                        )
     except Exception as e:
         logger.error(f"Error posting to channel: {str(e)}")
         logger.exception(e)  # Log full exception details
