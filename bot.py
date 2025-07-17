@@ -1,6 +1,7 @@
 import os
 import logging
 import asyncio
+import aiohttp
 from telegram.ext import Application, CommandHandler
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
@@ -34,13 +35,24 @@ async def post_to_channel(context: ContextTypes.DEFAULT_TYPE, courses):
         if courses:
             for course in courses:
                 if course['udemy_url']:
+                    message = (
+
+                        f'\n🔗 {course["udemy_url"]}'  # URL
+                    )
+                    
                     for channel in CHANNEL_ID:
-                        await context.bot.send_message(
-                            chat_id=channel,
-                            text=course['udemy_url'],
-                            disable_web_page_preview=False,
-                            protect_content=True
-                        )
+                        try:
+                            await context.bot.send_message(
+                                chat_id=channel,
+                                text=message,
+                                disable_web_page_preview=False,
+                                protect_content=True
+                            )
+                            # Add a small delay between messages to avoid rate limiting
+                            await asyncio.sleep(1)
+                        except Exception as channel_error:
+                            logger.error(f"Error posting to channel {channel}: {str(channel_error)}")
+                            continue  # Continue with next channel if one fails
     except Exception as e:
         logger.error(f"Error posting to channel: {str(e)}")
         logger.exception(e)  # Log full exception details
@@ -48,14 +60,15 @@ async def post_to_channel(context: ContextTypes.DEFAULT_TYPE, courses):
 async def check_new_courses(context: ContextTypes.DEFAULT_TYPE):
     global last_posted_courses
     try:
-        courses = get_courses()
+        courses = await get_courses()
         if courses:
             new_courses = []
             for course in courses:
                 # Skip courses with no Udemy URL
                 if not course['udemy_url']:
                     continue
-                course_id = f"{course['title']}-{course['date']}"
+                # Create unique ID using title, date and URL
+                course_id = f"{course['title']}-{course['date']}-{course['udemy_url']}"
                 if course_id not in last_posted_courses:
                     new_courses.append(course)
                     last_posted_courses.add(course_id)
@@ -78,9 +91,7 @@ async def courses(update: Update, context: ContextTypes.DEFAULT_TYPE):
             message = 'Latest Udemy Courses:\n\n'
             for course in courses:
                 message += (
-                    f'📚 {course["title"]}\n'
-                    f'📅 {course["date"]}\n'
-                    f'🏷️ Category: {course["category"].title()}\n'
+                
                     f'🔗 {course["udemy_url"]}\n\n'
                 )
             await update.message.reply_text(message, disable_web_page_preview=True)
