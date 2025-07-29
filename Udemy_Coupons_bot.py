@@ -16,6 +16,11 @@ Join our most useful and trending Telegram channels for daily updates, learning,
 
 👇 Tap to join and never miss an update:
 
+1️⃣ 🎯 UPSC & SSC CGL Quiz Preparation
+🔍 Daily MCQs | PYQs | Exam Practice
+👉 Join Now 👇
+https://t.me/UPSC_SSC_Quiz_Preparation
+
 2️⃣ 📈 Crypto News Daily
 🪙 Latest Crypto Market Updates | Signals | News
 👉 Join Now 👇
