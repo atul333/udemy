@@ -26,11 +26,6 @@ https://t.me/Crypto_News_Daily_2
 👉 Join Now 👇
 https://t.me/English_Grammar_Quiz_GK
 
-4️⃣ 🎓 Udemy Free Course Coupons
-💡 100% Free Udemy Courses | Skill Boosters
-👉 Join Now 👇
-https://t.me/udemy_direct_coupons
-
 5️⃣ 📰 Current Affairs GK Free
 📆 Daily Current Affairs | Important GK | Free PDFs
 👉 Join Now 👇
