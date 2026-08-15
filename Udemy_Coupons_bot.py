@@ -1,7 +1,9 @@
 import os
+import sys
 import logging
 import asyncio
 import aiohttp
+from dotenv import load_dotenv
 from telegram.ext import Application, CommandHandler
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
@@ -9,6 +11,9 @@ from scraper import get_courses
 from datetime import datetime
 import uuid
 from telegram.constants import ParseMode
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Advertisement message
 ADVERTISEMENT = """📢 Top Telegram Channels You Shouldn't Miss! 🔥
@@ -46,9 +51,18 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Bot token and channel ID
-TOKEN = '7962778190:AAFC1pBpsVof7Gae73tKEflbF_EUCV6d6yc'
-CHANNEL_ID = ('@ENROLL_FREE_UDEMY_COURSES','@udemy_direct_coupons','@free_udemy_courses_ak')
+# Bot token and channel IDs — loaded from .env file
+TOKEN = os.getenv('BOT_TOKEN')
+CHANNEL_IDS_RAW = os.getenv('CHANNEL_IDS', '')
+CHANNEL_ID = tuple(c.strip() for c in CHANNEL_IDS_RAW.split(',') if c.strip())
+CHECK_INTERVAL = int(os.getenv('CHECK_INTERVAL', '300'))
+AD_INTERVAL = int(os.getenv('AD_INTERVAL', '3600'))
+
+# Validate required credentials at startup
+if not TOKEN:
+    sys.exit("❌ ERROR: BOT_TOKEN is not set. Please add it to your .env file.")
+if not CHANNEL_ID:
+    sys.exit("❌ ERROR: CHANNEL_IDS is not set. Please add it to your .env file.")
 
 # Store last posted courses to avoid duplicates
 last_posted_courses = set()
@@ -64,11 +78,9 @@ async def post_to_channel(context: ContextTypes.DEFAULT_TYPE, courses):
     try:
         if courses:
             for course in courses:
-                if course['udemy_url']:
-                    message = (
+                if course.get('udemy_url'):
+                    message = f'\n🔗 {course["udemy_url"]}'
 
-                        f'\n🔗 {course["udemy_url"]}'  # URL
-                    )
                     
                     for channel in CHANNEL_ID:
                         try:
@@ -109,7 +121,7 @@ async def check_new_courses(context: ContextTypes.DEFAULT_TYPE):
     try:
         logger.info("Checking for new courses...")
         courses = await get_courses()
-        new_courses = [c for c in courses if c['udemy_url'] not in last_posted_courses]
+        new_courses = [c for c in courses if c.get('udemy_url') and c['udemy_url'] not in last_posted_courses]
         
         if new_courses:
             await post_to_channel(context, new_courses)
@@ -122,19 +134,16 @@ async def check_new_courses(context: ContextTypes.DEFAULT_TYPE):
             
     except Exception as e:
         logger.error(f"Error in check_new_courses: {str(e)}")
-        raise
 
 async def courses(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         await update.message.reply_text('Fetching latest courses... Please wait.')
-        courses = get_courses()
-        if courses:
+        courses_list = await get_courses(limit=5)
+        if courses_list:
             message = 'Latest Udemy Courses:\n\n'
-            for course in courses:
-                message += (
-                
-                    f'🔗 {course["udemy_url"]}\n\n'
-                )
+            for course in courses_list:
+                if course.get('udemy_url'):
+                    message += f"📚 {course['title']}\n🔗 {course['udemy_url']}\n\n"
             await update.message.reply_text(message, disable_web_page_preview=True)
         else:
             await update.message.reply_text('Sorry, unable to fetch courses at the moment.')
@@ -142,38 +151,49 @@ async def courses(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logger.error(f"Error in courses command: {str(e)}")
         await update.message.reply_text('An error occurred while fetching courses.')
 
+
 async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
     logger.error(f"Exception while handling an update: {context.error}")
 
 def main():
+    import time
     while True:
+        loop = None
         try:
-            # Create application
+            # Create a brand-new event loop each restart iteration.
+            # This avoids "Event loop is closed" and
+            # "Cannot close a running event loop" errors.
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+
             application = Application.builder().token(TOKEN).build()
 
             # Add command handlers
             application.add_handler(CommandHandler("start", start))
             application.add_handler(CommandHandler("courses", courses))
-            
-            # Schedule the jobs
-            job_queue = application.job_queue
-            job_queue.run_repeating(check_new_courses, interval=300, first=10)  # 300 seconds = 5 minutes
-            # Schedule advertisement to run every hour
-            job_queue.run_repeating(send_advertisement, interval=3600, first=3600)  # 3600 seconds = 1 hour
 
-            # Add error handler
+            # Schedule jobs (intervals from .env)
+            job_queue = application.job_queue
+            job_queue.run_repeating(check_new_courses, interval=CHECK_INTERVAL, first=10)
+            job_queue.run_repeating(send_advertisement, interval=AD_INTERVAL, first=AD_INTERVAL)
+
             application.add_error_handler(error_handler)
 
-            # Start the bot
             logger.info('Bot is starting...')
             application.run_polling(allowed_updates=Update.ALL_TYPES)
+
         except Exception as e:
             logger.error(f"Critical error: {str(e)}")
-            # Wait for a moment before restarting
-            import time
+            logger.info('Attempting to restart the bot in 5 seconds...')
             time.sleep(5)
-            logger.info('Attempting to restart the bot...')
-            continue
+        finally:
+            # Cleanly close the loop before the next iteration
+            try:
+                if loop and not loop.is_closed():
+                    loop.close()
+            except Exception:
+                pass
+
 
 if __name__ == '__main__':
     main()

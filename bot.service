@@ -1,13 +1,28 @@
 [Unit]
 Description=Udemy Course Coupons Telegram Bot
 After=network.target
+Wants=network-online.target
 
 [Service]
 Type=simple
-User=root
-WorkingDirectory=d:\Udemy Course Coupons Bot
-ExecStart=python bot.py
+User=ubuntu
+Group=ubuntu
+
+# ⚠️ Set this to your bot directory on the Ubuntu server (e.g., /home/ubuntu/udemy-coupons-bot)
+WorkingDirectory=/home/ubuntu/udemy-coupons-bot
+
+# ⚠️ If using a virtual environment (recommended):
+# ExecStart=/home/ubuntu/udemy-coupons-bot/venv/bin/python3 /home/ubuntu/udemy-coupons-bot/Udemy_Coupons_bot.py
+# Otherwise:
+ExecStart=/usr/bin/python3 /home/ubuntu/udemy-coupons-bot/Udemy_Coupons_bot.py
+
 Restart=always
+RestartSec=10
+Environment=PYTHONUNBUFFERED=1
+
+# Log output to systemd journal (view with: journalctl -u udemy-bot -f)
+StandardOutput=journal
+StandardError=journal
 
 [Install]
 WantedBy=multi-user.target
