@@ -57,6 +57,7 @@ CHANNEL_IDS_RAW = os.getenv('CHANNEL_IDS', '')
 CHANNEL_ID = tuple(c.strip() for c in CHANNEL_IDS_RAW.split(',') if c.strip())
 CHECK_INTERVAL = int(os.getenv('CHECK_INTERVAL', '300'))
 AD_INTERVAL = int(os.getenv('AD_INTERVAL', '3600'))
+ENABLE_ADS = os.getenv('ENABLE_ADS', 'false').strip().lower() in ('true', '1', 'yes')
 
 # Validate required credentials at startup
 if not TOKEN:
@@ -175,7 +176,10 @@ def main():
             # Schedule jobs (intervals from .env)
             job_queue = application.job_queue
             job_queue.run_repeating(check_new_courses, interval=CHECK_INTERVAL, first=10)
-            job_queue.run_repeating(send_advertisement, interval=AD_INTERVAL, first=AD_INTERVAL)
+            
+            # Advertisement posting (currently disabled - enable with ENABLE_ADS=true in .env)
+            if ENABLE_ADS:
+                job_queue.run_repeating(send_advertisement, interval=AD_INTERVAL, first=AD_INTERVAL)
 
             application.add_error_handler(error_handler)
 
